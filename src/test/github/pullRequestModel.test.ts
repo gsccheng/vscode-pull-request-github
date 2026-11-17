@@ -125,6 +125,28 @@ describe('PullRequestModel', function () {
 		assert.deepStrictEqual(changes.lastCall.args[0][0].event, { mergeability: true });
 	});
 
+	it('takes freshly fetched bodyHTML even when the markdown body is unchanged', function () {
+		const pr = new PullRequestBuilder().number(795).build();
+		const model = repo.createOrUpdatePullRequestModel(convertRESTPullRequestToRawPullRequest(pr, repo));
+		model.update({ ...model.item, bodyHTML: '<img src="https://private-user-images.githubusercontent.com/1.png?jwt=old">' });
+
+		const freshHTML = '<img src="https://private-user-images.githubusercontent.com/1.png?jwt=new">';
+		model.update({ ...model.item, body: model.body, bodyHTML: freshHTML });
+
+		assert.strictEqual(model.bodyHTML, freshHTML);
+	});
+
+	it('keeps the existing bodyHTML when an update has none', function () {
+		const pr = new PullRequestBuilder().number(796).build();
+		const model = repo.createOrUpdatePullRequestModel(convertRESTPullRequestToRawPullRequest(pr, repo));
+		const existingHTML = '<p>description</p>';
+		model.update({ ...model.item, bodyHTML: existingHTML });
+
+		model.update({ ...model.item, bodyHTML: undefined });
+
+		assert.strictEqual(model.bodyHTML, existingHTML);
+	});
+
 	it('emits a draft change separately from head and mergeability changes', function () {
 		const model = repo.createOrUpdatePullRequestModel(
 			convertRESTPullRequestToRawPullRequest(new PullRequestBuilder().number(794).build(), repo));
